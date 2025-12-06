@@ -3073,7 +3073,38 @@ header h1 {
   transform: translateY(-3px);
   box-shadow: 0 4px 15px rgba(90, 143, 123, 0.3);
 }
+/* [v12.1] Hotfix: 解決遮擋與跳動 */
 
+/* 1. 電腦版 Setting 選單 (強制脫離父容器) */
+@media (min-width: 769px) {
+    .settings-menu-popover {
+        position: fixed !important; /* 由 absolute 改為 fixed */
+        top: 70px !important;       /* 固定在 Header 下方 */
+        right: 30px !important;     /* 靠右 */
+        left: auto !important;
+        z-index: 2147483647 !important; /* 宇宙最高 */
+        /* 確保唔會受 Header 的 overflow:hidden 影響 */
+    }
+}
+
+/* 2. 手機版導航 (預設隱藏，JS 載入後顯示，防止閃左邊) */
+.sub-nav-island {
+    opacity: 0; 
+    animation: fadeInNav 0.3s ease forwards; /* 載入時淡入 */
+}
+
+@keyframes fadeInNav {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 手機版強制置中 (加強權重) */
+@media (max-width: 768px) {
+    .sub-nav-island {
+        justify-content: center !important; /* 強制置中 */
+        display: flex !important;
+    }
+}
 </style>
 
 </head>
@@ -5408,13 +5439,47 @@ function initSwipeGestures() {
   }
 }
 
-// [v11.1] 設定選單開關
+// [v12.1] Setting 選單開關 (支援 Fixed Positioning)
 function toggleSettingsMenu() {
     const menu = document.getElementById('settings-dropdown');
-    if (menu) {
-        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    if (!menu) return;
+
+    // 獲取按鈕位置 (如果是 Desktop)
+    const btn = document.querySelector('.header-right .font-control-btn');
+    
+    if (menu.style.display === 'none' || menu.style.display === '') {
+        menu.style.display = 'block';
+        
+        // 電腦版動態定位 (對齊按鈕)
+        if (window.innerWidth > 768 && btn) {
+            const rect = btn.getBoundingClientRect();
+            menu.style.top = (rect.bottom + 10) + 'px';
+            menu.style.right = (window.innerWidth - rect.right) + 'px';
+            menu.style.left = 'auto';
+        }
+    } else {
+        menu.style.display = 'none';
     }
 }
+
+// 點擊空白處關閉 (保持不變，但確保能抓到 fixed 元素)
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('settings-dropdown');
+    const btn = document.querySelector('.font-control-btn');
+    
+    // 檢查是否點擊了 Menu 內部或按鈕
+    if (menu && menu.style.display === 'block') {
+        if (!menu.contains(e.target) && !btn.contains(e.target)) {
+            menu.style.display = 'none';
+        }
+    }
+});
+
+// 視窗縮放時關閉 Menu (防止位置錯亂)
+window.addEventListener('resize', () => {
+    const menu = document.getElementById('settings-dropdown');
+    if (menu) menu.style.display = 'none';
+});
 
 // 點擊空白處關閉選單
 document.addEventListener('click', (e) => {
